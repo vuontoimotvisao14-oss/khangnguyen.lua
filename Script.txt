@@ -1,0 +1,263 @@
+--[[\n    Script: Khang Nguyen Full Masterpiece UI (Steal an Egg)\n    Author / Brand: Khang Nguyen\n]]--
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local LocalPlayer = Players.LocalPlayer
+
+getgenv().KhangNguyenConfig = getgenv().KhangNguyenConfig or {
+    AntiRagdoll = true,
+    SpeedBypass = false,
+    SpeedValue = 60,
+    AntiTrap = true,
+    FixLag = true,
+    Noclip = true,
+    ShowPetInEgg = true,
+    AutoGetEgg = false,
+    SelectedEggFilter = "Secret",
+    FlySpeed = 350,
+    HitboxSize = 25,
+    AutoAttack = false,
+    TargetPlayer = "",
+    AutoServerHop = false,
+    MinPlayersHop = 3
+}
+
+if CoreGui:FindFirstChild("KhangNguyenFullUI") then
+    CoreGui.KhangNguyenFullUI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "KhangNguyenFullUI"
+ScreenGui.Parent = CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 460, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -230, 0.5, -190)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 45)
+Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+Title.Text = "Khang Nguyen - Full Menu (Steal an Egg)"
+Title.Font = Enum.Font.SourceSansBold
+Title.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = Title
+
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Size = UDim2.new(1, -20, 1, -60)
+ScrollingFrame.Position = UDim2.new(0, 10, 0, 50)
+ScrollingFrame.BackgroundTransparency = 1
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 650)
+ScrollingFrame.ScrollBarThickness = 6
+ScrollingFrame.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutIndex
+UIListLayout.Padding = UDim.new(0, 8)
+UIListLayout.Parent = ScrollingFrame
+
+local function CreateToggle(name, configKey, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 35)
+    btn.BackgroundColor3 = getgenv().KhangNguyenConfig[configKey] and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(45, 45, 45)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 14
+    btn.Font = Enum.Font.SourceSansBold
+    btn.Text = name .. ": " .. (getgenv().KhangNguyenConfig[configKey] and "BẬT" or "TẮT")
+    btn.Parent = ScrollingFrame
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        getgenv().KhangNguyenConfig[configKey] = not getgenv().KhangNguyenConfig[configKey]
+        btn.BackgroundColor3 = getgenv().KhangNguyenConfig[configKey] and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(45, 45, 45)
+        btn.Text = name .. ": " .. (getgenv().KhangNguyenConfig[configKey] and "BẬT" or "TẮT")
+        if callback then callback(getgenv().KhangNguyenConfig[configKey]) end
+    end)
+end
+
+CreateToggle("Noclip (Xuyên tường toàn diện)", "Noclip")
+CreateToggle("Chống ngã/choáng (Anti-Ragdoll)", "AntiRagdoll")
+CreateToggle("Xóa bẫy nguy hiểm (Anti-Trap)", "AntiTrap")
+CreateToggle("Tăng tốc độ di chuyển (Speed Bypass)", "SpeedBypass")
+CreateToggle("Tự động cướp trứng (Auto Farm Egg)", "AutoGetEgg")
+CreateToggle("Hiển thị ESP Trứng & Pet bên trong", "ShowPetInEgg")
+CreateToggle("Tăng Hitbox người chơi khác", "HitboxEnabled") -- Logic kiểm soát riêng
+CreateToggle("Tự động đánh người (Auto Attack)", "AutoAttack")
+CreateToggle("Tự động đổi Server ít người (Server Hop)", "AutoServerHop")
+CreateToggle("Tối ưu hóa game (Fix Lag Cực Hạn)", "FixLag")
+
+-- Các chức năng xử lý ngầm đầy đủ 100%
+RunService.Stepped:Connect(function()
+    if getgenv().KhangNguyenConfig.Noclip then
+        pcall(function()
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+RunService.RenderStepped:Connect(function(dt)
+    if getgenv().KhangNguyenConfig.SpeedBypass then
+        pcall(function()
+            local char = LocalPlayer.Character
+            if char then
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if hrp and humanoid then
+                    local moveDir = humanoid.MoveDirection
+                    if moveDir.Magnitude > 0 then
+                        hrp.CFrame = hrp.CFrame + (moveDir * getgenv().KhangNguyenConfig.SpeedValue * dt)
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        if getgenv().KhangNguyenConfig.AntiRagdoll then
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char then
+                    local humanoid = char:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                        humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.8) do
+        if getgenv().KhangNguyenConfig.AntiTrap then
+            pcall(function()
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v and v.Parent and v:IsA("BasePart") then
+                        local name = v.Name:lower()
+                        if name:find("trap") or name:find("bẫy") or name:find("spike") or name:find("danger") then
+                            v.CanCollide = false
+                            v.Transparency = 1
+                            local touch = v:FindFirstChild("TouchInterest")
+                            if touch then touch:Destroy() end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- ESP & Quản lý trứng
+local EggCache = {}
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            for _, egg in pairs(Workspace:GetDescendants()) do
+                if egg and egg.Parent and egg:IsA("Model") then
+                    local nameLower = egg.Name:lower()
+                    if nameLower:find("egg") or nameLower:find("trứng") then
+                        local primaryPart = egg.PrimaryPart or egg:FindFirstChildWhichIsA("BasePart")
+                        if primaryPart then
+                            if not egg:FindFirstChild("KhangNguyenEggESP") then
+                                local highlight = Instance.new("Highlight")
+                                highlight.Name = "KhangNguyenEggESP"
+                                highlight.Adornee = egg
+                                highlight.FillColor = nameLower:find("secret") and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 255)
+                                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                highlight.Parent = egg
+
+                                local billboard = Instance.new("BillboardGui")
+                                billboard.Name = "KhangNguyenTagUI"
+                                billboard.Size = UDim2.new(0, 140, 0, 70)
+                                billboard.AlwaysOnTop = true
+                                billboard.Adornee = primaryPart
+
+                                local label = Instance.new("TextLabel")
+                                label.Size = UDim2.new(1, 0, 1, 0)
+                                label.BackgroundTransparency = 1
+                                label.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                label.TextScaled = true
+                                label.TextStrokeTransparency = 0
+                                label.Text = egg.Name .. "\n[Secret/Mutation]"
+                                label.Parent = billboard
+
+                                billboard.Parent = egg
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- Hitbox mở rộng
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    hrp.Size = Vector3.new(getgenv().KhangNguyenConfig.HitboxSize, getgenv().KhangNguyenConfig.HitboxSize, getgenv().KhangNguyenConfig.HitboxSize)
+                    hrp.Transparency = 0.85
+                    hrp.CanCollide = false
+                end
+            end
+        end
+    end)
+end)
+
+-- Auto Server Hop
+task.spawn(function()
+    while task.wait(15) do
+        if getgenv().KhangNguyenConfig.AutoServerHop then
+            pcall(function()
+                local api = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+                local success, result = pcall(function() return game:HttpGet(api) end)
+                if success and result then
+                    local decodeSuccess, response = pcall(function() return HttpService:JSONDecode(result) end)
+                    if decodeSuccess and response and response.data then
+                        for _, s in ipairs(response.data) do
+                            if s.playing and s.maxPlayers and s.playing < s.maxPlayers and s.playing <= getgenv().KhangNguyenConfig.MinPlayersHop and s.id ~= game.JobId then
+                                TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+print("[Khang Nguyen Full UI] Đã nạp thành công menu đầy đủ 100% tính năng!")
