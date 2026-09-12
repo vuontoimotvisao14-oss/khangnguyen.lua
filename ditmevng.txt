@@ -1,0 +1,497 @@
+--[[\n    Script: Khang Nguyen Master Engine Ultimate v25.0 (Full Features & Guaranteed UI)\n    Target Game: Steal an Egg (Roblox)\n]]--
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- [CONFIG TOÀN CỤC]: Đầy đủ toàn bộ trạng thái tính năng
+getgenv().KhangNguyenSettings = {
+    TrollMode = {
+        Enabled = false,
+        TargetPlayerName = "",
+        BasePosition = Vector3.new(0, 5, 0),
+        HoverAltitude = 15
+    },
+    AutoFarmRarity = {
+        ["Secret"] = true,
+        ["Mutation"] = true,
+        ["God"] = true,
+        ["Final"] = false,
+        ["Rare"] = false,
+        ["Normal"] = false
+    },
+    AutoFarmMutation = {
+        ["Rainbow"] = true,
+        ["Golden"] = true,
+        ["Diamond"] = true,
+        ["Shadow"] = true,
+        ["Blood"] = false
+    },
+    HitboxExpanded = true,
+    HitboxSize = Vector3.new(300, 300, 300),
+    AutoAttack = true,
+    AutoServerHop = true,
+    ESPEnabled = true,
+    NoclipEnabled = true,
+    AntiTrap = true
+}
+
+-- [GIAO DIỆN ORION UI CHUẨN XÁC 100% HIỆN THỊ]: Sử dụng thư viện UI uy tín tuyệt đối
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/jensonhirst/Orion/main/source')))()
+
+local Window = OrionLib:MakeWindow({
+    Name = "Khang Nguyen Hub | Steal an Egg",
+    HidePremium = false,
+    SaveConfig = true,
+    ConfigFolder = "KhangNguyenHub_Config"
+})
+
+-- Tab 1: Tính Năng Chính (Hitbox, Noclip, Anti-Trap, Auto Attack)
+local MainTab = Window:MakeTab({
+    Name = "Tính Năng",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+MainTab:AddToggle({
+    Name = "Hitbox Siêu Xa (300x300)",
+    Default = true,
+    Callback = function(v)
+        getgenv().KhangNguyenSettings.HitboxExpanded = v
+    end
+})
+
+MainTab:AddToggle({
+    Name = "Noclip Đa Tầng",
+    Default = true,
+    Callback = function(v)
+        getgenv().KhangNguyenSettings.NoclipEnabled = v
+    end
+})
+
+MainTab:AddToggle({
+    Name = "Chống Bẫy / Lade (Anti-Trap)",
+    Default = true,
+    Callback = function(v)
+        getgenv().KhangNguyenSettings.AntiTrap = v
+    end
+})
+
+MainTab:AddToggle({
+    Name = "Tự Động Đánh (Auto Attack)",
+    Default = true,
+    Callback = function(v)
+        getgenv().KhangNguyenSettings.AutoAttack = v
+    end
+})
+
+MainTab:AddToggle({
+    Name = "ESP Radar Xuyên Tường",
+    Default = true,
+    Callback = function(v)
+        getgenv().KhangNguyenSettings.ESPEnabled = v
+    end
+})
+
+-- Tab 2: Auto Farm & Troll
+local FarmTab = Window:MakeTab({
+    Name = "Auto Farm & Troll",
+    Icon = "rbxassetid://6034509993",
+    PremiumOnly = false
+})
+
+FarmTab:AddToggle({
+    Name = "Auto Server Hop (Ít Người)",
+    Default = true,
+    Callback = function(v)
+        getgenv().KhangNguyenSettings.AutoServerHop = v
+    end
+})
+
+FarmTab:AddToggle({
+    Name = "Auto Farm Trứng Theo Lọc",
+    Default = true,
+    Callback = function(v)
+        getgenv().KhangNguyenSettings.AutoFarmRarity["Secret"] = v
+        getgenv().KhangNguyenSettings.AutoFarmRarity["Mutation"] = v
+    end
+})
+
+FarmTab:AddTextbox({
+    Name = "Tên Mục Tiêu (Troll Mode)",
+    Default = "",
+    TextDisappear = false,
+    Callback = function(value)
+        getgenv().KhangNguyenSettings.TrollMode.TargetPlayerName = value
+    end
+})
+
+FarmTab:AddToggle({
+    Name = "Bật Chế Độ Troll Bám Đầu (15 Studs)",
+    Default = false,
+    Callback = function(v)
+        getgenv().KhangNguyenSettings.TrollMode.Enabled = v
+    end
+})
+
+OrionLib:Init()
+
+-- [MODULE 1]: Metatable Hooking Chống Check Thuộc Tính
+local OriginalIndex
+OriginalIndex = hookmetamethod(game, "__index", function(self, property)
+    if not checkcaller() and (property == "WalkSpeed" or property == "JumpPower" or property == "HipHeight") then
+        local char = LocalPlayer.Character
+        if char and self == char:FindFirstChildOfClass("Humanoid") then
+            if property == "WalkSpeed" then return 16 end
+            if property == "JumpPower" then return 50 end
+        end
+    end
+    return OriginalIndex(self, property)
+end)
+
+-- [MODULE 2]: Dynamic Memory Pool Dọn Rác Tự Động
+local MemoryPool = {
+    ActiveInstances = {},
+    Register = function(self, instance) table.insert(self.ActiveInstances, instance) end,
+    Flush = function(self)
+        for i = #self.ActiveInstances, 1, -1 do
+            if not self.ActiveInstances[i] or not self.ActiveInstances[i].Parent then
+                table.remove(self.ActiveInstances, i)
+            end
+        end
+        collectgarbage("step", 10)
+    end
+}
+task.spawn(function() while task.wait(5) do MemoryPool:Flush() end end)
+
+-- [MODULE 3]: Noclip Toàn Diện Đa Tầng
+local QuantumNoclip = RunService.Stepped:Connect(function()
+    pcall(function()
+        if not getgenv().KhangNguyenSettings.NoclipEnabled then return end
+        local character = LocalPlayer.Character
+        if character then
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                    part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                end
+            end
+        end
+    end)
+end)
+
+-- [MODULE 4]: Anti-Ragdoll & Kháng Sát Thương/Chấn Thương
+local QuantumAntiRagdoll = task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            local character = LocalPlayer.Character
+            if character then
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    for _, state in ipairs({
+                        Enum.HumanoidStateType.Ragdoll, Enum.HumanoidStateType.FallingDown,
+                        Enum.HumanoidStateType.PlatformStand, Enum.HumanoidStateType.Stunned,
+                        Enum.HumanoidStateType.Swimming, Enum.HumanoidStateType.Dead, Enum.HumanoidStateType.Flying
+                    }) do
+                        humanoid:SetStateEnabled(state, false)
+                    end
+                    if humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then
+                        humanoid.Health = humanoid.MaxHealth
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- [MODULE 5]: Anti-Trap Quét Bẫy / Laser / Gai
+local QuantumAntiTrap = task.spawn(function()
+    while task.wait(0.08) do
+        pcall(function()
+            if not getgenv().KhangNguyenSettings.AntiTrap then return end
+            local char = LocalPlayer.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            local pos = char.HumanoidRootPart.Position
+            for _, obj in pairs(Workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and obj.Parent then
+                    local name = obj.Name:lower()
+                    if name:find("trap") or name:find("bẫy") or name:find("spike") or name:find("lava") or name:find("hazard") or name:find("poison") or name:find("laser") then
+                        if (obj.Position - pos).Magnitude < 120 then
+                            obj.CanCollide = false
+                            obj.Transparency = 1
+                            obj.Size = Vector3.new(0.001, 0.001, 0.001)
+                            local touch = obj:FindFirstChild("TouchInterest")
+                            if touch then touch:Destroy() end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- [MODULE 6]: Master Fix Lag & Tối Ưu Hóa Hiệu Năng
+local function InitializeMasterFixLag()
+    pcall(function()
+        local terrain = Workspace:FindFirstChildOfClass("Terrain")
+        if terrain then
+            terrain.WaterWaveSize = 0
+            terrain.WaterWaveTransparency = 1
+            terrain.WaterReflectance = 0
+            terrain.WaterColor = Color3.new(0, 0, 0)
+        end
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 999999
+        Lighting.Brightness = 4
+        Lighting.ClockTime = 12
+        
+        for _, worldObject in pairs(Workspace:GetDescendants()) do
+            if worldObject and worldObject.Parent then
+                if worldObject:IsA("BasePart") then
+                    worldObject.Material = Enum.Material.SmoothPlastic
+                    worldObject.Reflectance = 0
+                    worldObject.CastShadow = false
+                elseif worldObject:IsA("Decal") or worldObject:IsA("Texture") then
+                    worldObject.Transparency = 1
+                elseif worldObject:IsA("ParticleEmitter") or worldObject:IsA("Fire") or worldObject:IsA("Smoke") or worldObject:IsA("Sparkles") or worldObject:IsA("Trail") then
+                    worldObject.Enabled = false
+                end
+            end
+        end
+    end)
+end
+task.spawn(InitializeMasterFixLag)
+
+-- [MODULE 7]: TweenService Hyper Fly Siêu Mượt Mà
+local function ExecuteTweenFly(targetCFrame)
+    pcall(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        
+        local dist = (root.Position - targetCFrame.Position).Magnitude
+        local speed = 3000
+        local timeDuration = math.clamp(dist / speed, 0.01, 0.12)
+        
+        local tweenInfo = TweenInfo.new(timeDuration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(root, tweenInfo, {CFrame = targetCFrame})
+        tween:Play()
+        tween.Completed:Wait()
+    end)
+end
+
+-- [MODULE 8]: Hệ Thống Trolling & Cướp Trứng Bám Đầu Cao 15 Studs
+local QuantumTrollEngine = task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            local cfg = getgenv().KhangNguyenSettings.TrollMode
+            if not cfg.Enabled or cfg.TargetPlayerName == "" then return end
+            
+            local targetPlayer = nil
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Name:lower():find(cfg.TargetPlayerName:lower()) then
+                    targetPlayer = p
+                    break
+                end
+            end
+            
+            if targetPlayer and targetPlayer.Character then
+                local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                local char = LocalPlayer.Character
+                if targetRoot and char and char:FindFirstChild("HumanoidRootPart") then
+                    local hoverAltitude = cfg.HoverAltitude or 15
+                    local hoverCFrame = targetRoot.CFrame + Vector3.new(0, hoverAltitude, 0)
+                    char.HumanoidRootPart.CFrame = hoverCFrame
+                    
+                    local tool = char:FindFirstChildOfClass("Tool") or LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
+                    if tool then
+                        if tool.Parent == LocalPlayer.Backpack then tool.Parent = char end
+                        pcall(function() tool:Activate() end)
+                    end
+                    
+                    for _, obj in pairs(Workspace:GetDescendants()) do
+                        if obj:IsA("Model") and obj.Parent then
+                            local nameLower = obj.Name:lower()
+                            if nameLower:find("egg") or nameLower:find("trứng") then
+                                local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                                if primary and (primary.Position - targetRoot.Position).Magnitude < 25 then
+                                    ExecuteTweenFly(CFrame.new(primary.Position + Vector3.new(0, 3, 0)))
+                                    for _, prompt in pairs(obj:GetDescendants()) do
+                                        if prompt:IsA("ProximityPrompt") then fireproximityprompt(prompt) end
+                                    end
+                                    task.wait(0.02)
+                                    ExecuteTweenFly(CFrame.new(cfg.BasePosition))
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- [MODULE 9]: Hệ Thống Auto-Farm Lọc Theo List Độ Hiếm & Mutation
+local CustomFilteredEggFarm = task.spawn(function()
+    while task.wait(0.05) do
+        pcall(function()
+            if getgenv().KhangNguyenSettings.TrollMode.Enabled and getgenv().KhangNguyenSettings.TrollMode.TargetPlayerName ~= "" then
+                return
+            end
+            
+            local bestTargetPart = nil
+            local bestTargetModel = nil
+            local highestScore = -math.huge
+            
+            for _, obj in pairs(Workspace:GetDescendants()) do
+                if obj:IsA("Model") and obj.Parent then
+                    local nameLower = obj.Name:lower()
+                    if nameLower:find("egg") or nameLower:find("trứng") then
+                        local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                        if primary then
+                            local matchesRarity = false
+                            local matchesMutation = false
+                            local computedScore = 0
+                            
+                            for rarityName, isEnabled in pairs(getgenv().KhangNguyenSettings.AutoFarmRarity) do
+                                if isEnabled and nameLower:find(rarityName:lower()) then
+                                    matchesRarity = true
+                                    computedScore = computedScore + 500
+                                    break
+                                end
+                            end
+                            
+                            for mutationName, isEnabled in pairs(getgenv().KhangNguyenSettings.AutoFarmMutation) do
+                                if isEnabled and nameLower:find(mutationName:lower()) then
+                                    matchesMutation = true
+                                    computedScore = computedScore + 1000
+                                    break
+                                end
+                            end
+                            
+                            if matchesRarity or matchesMutation or (not next(getgenv().KhangNguyenSettings.AutoFarmRarity) and not next(getgenv().KhangNguyenSettings.AutoFarmMutation)) then
+                                local char = LocalPlayer.Character
+                                if char and char:FindFirstChild("HumanoidRootPart") then
+                                    local dist = (char.HumanoidRootPart.Position - primary.Position).Magnitude
+                                    computedScore = computedScore - (dist * 0.05)
+                                    
+                                    if computedScore > highestScore then
+                                        highestScore = computedScore
+                                        bestTargetPart = primary
+                                        bestTargetModel = obj
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            
+            if bestTargetPart and bestTargetModel then
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local originalCF = char.HumanoidRootPart.CFrame
+                    
+                    ExecuteTweenFly(CFrame.new(bestTargetPart.Position + Vector3.new(0, 3, 0)))
+                    task.wait(0.01)
+                    
+                    for _, prompt in pairs(bestTargetModel:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") then
+                            fireproximityprompt(prompt)
+                        end
+                    end
+                    
+                    local tool = char:FindFirstChildOfClass("Tool") or LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
+                    if tool then
+                        if tool.Parent == LocalPlayer.Backpack then tool.Parent = char end
+                        pcall(function() tool:Activate() end)
+                    end
+                    
+                    task.wait(0.01)
+                    ExecuteTweenFly(originalCF)
+                end
+            end
+        end)
+    end
+end)
+
+-- [MODULE 10]: Hitbox Expansion Siêu Khủng (300x300x300)
+local QuantumHitboxManager = RunService.RenderStepped:Connect(function()
+    pcall(function()
+        if not getgenv().KhangNguyenSettings.HitboxExpanded then return end
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local root = player.Character:FindFirstChild("HumanoidRootPart")
+                if root then
+                    root.Size = getgenv().KhangNguyenSettings.HitboxSize or Vector3.new(300, 300, 300)
+                    root.Transparency = 0.95
+                    root.CanCollide = false
+                    root.BrickColor = BrickColor.new("Really red")
+                    root.Material = Enum.Material.Neon
+                end
+            end
+        end
+    end)
+end)
+
+-- [MODULE 11]: Combat Auto Attack Tần Số Cao
+local QuantumCombatEngine = task.spawn(function()
+    while task.wait(0.03) do
+        pcall(function()
+            if not getgenv().KhangNguyenSettings.AutoAttack then return end
+            local char = LocalPlayer.Character
+            if char then
+                local tool = char:FindFirstChildOfClass("Tool") or LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
+                if tool then
+                    if tool.Parent == LocalPlayer.Backpack then tool.Parent = char end
+                    tool:Activate()
+                end
+            end
+        end)
+    end
+end)
+
+-- [MODULE 12]: Auto Server Hop (Ít người)
+local QuantumServerHopManager = task.spawn(function()
+    while task.wait(25) do
+        pcall(function()
+            if not getgenv().KhangNguyenSettings.AutoServerHop then return end
+            local endpoint = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+            local success, response = pcall(function() return game:HttpGet(endpoint) end)
+            if success and response then
+                local decoded = HttpService:JSONDecode(response)
+                if decoded and decoded.data then
+                    for _, s in ipairs(decoded.data) do
+                        if s.playing and s.maxPlayers and s.playing < s.maxPlayers and s.playing <= 2 and s.id ~= game.JobId then
+                            TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
+                            break
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- [MODULE 13]: ESP Holographic Radar
+local QuantumESPManager = task.spawn(function()
+    while task.wait(0.5) do
+        pcall(function()
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    local charModel = player.Character
+                    local hl = charModel:FindFirstChild("QuantumHighlight")
+                    if getgenv().KhangNguyenSettings.ESPEnabled then
+                        if not hl then
+                            hl = Insi
